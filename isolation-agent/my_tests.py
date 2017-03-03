@@ -35,7 +35,7 @@ if __name__ == "__main__":
     #print(game.get_legal_moves())
 
     print('What algo thinks:')
-    print(player1.minimax(game, 2))
+    print(player1.minimax(game, 3))
     print()
     print('What should be there:')
     print('First state legal moves:')

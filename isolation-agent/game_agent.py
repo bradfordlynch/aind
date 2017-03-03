@@ -9,6 +9,7 @@ relative strength using tournament.py and include the results in your report.
 import random
 from random import randint
 
+counter = 0
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
@@ -164,14 +165,20 @@ class CustomPlayer:
             # when the timer gets close to expiring
             if not legal_moves:
                 return (-1,-1)
-            return self.minimax(game, 2)[1]
+            else:
+                depth = 3
+                if self.iterative:
+                    for d in range(1, depth+1):
+                        best_move = self.minimax(game, d)
+                else:
+                    best_move = self.minimax(game, depth)
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
             pass
 
         # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        return best_move[1]
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -207,17 +214,6 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
 
-        # Check if iterative deepening is enabled
-        if self.iterative:
-            for d in range(depth):
-                best_move = self._minimax(game, d, maximizing_player)
-
-            return best_move
-        else:
-            #raise ValueError('Only ID implemented')
-            return self._minimax(game, depth, maximizing_player)
-
-    def _minimax(self, game, depth, maximizing_player=True):
         # Get the legal moves
         legal_moves = game.get_legal_moves()
         if legal_moves:
@@ -231,7 +227,7 @@ class CustomPlayer:
                 scores = []
                 for m in legal_moves:
                     new_game = game.forecast_move(m)
-                    score = self._minimax(new_game, depth-1, not maximizing_player)
+                    score = self.minimax(new_game, depth-1, not maximizing_player)
                     scores.append((score[0], m))
 
             # Return score based on maximizing criteria
@@ -288,5 +284,54 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # Get the legal moves
+        legal_moves = game.get_legal_moves()
+        if legal_moves:
+            # Check if max depth has been reached
+            if depth == 0:
+                # Apply heuristic to score moves
+                return (self.score(game, self), game.get_player_location(self))
+                # scores = [(self.score(game.forecast_move(m), self),m) for m in legal_moves]
+                # print(scores)
+                #
+                # if maximizing_player:
+                #     return max(scores)
+                # else:
+                #     return min(scores)
+            # Max depth not reached, call minimax again
+            elif maximizing_player:
+                best_move_score = alpha
+
+                # Call minimax_a_b for each remaining move to get scores of branch
+                for m in legal_moves:
+                    new_game = game.forecast_move(m)
+                    score = self.alphabeta(new_game, depth-1, best_move_score, beta, False)
+                    if score[0] > best_move_score:
+                        best_move = (score[0], m)
+                        best_move_score = score[0]
+                    if beta <= best_move_score:
+                        best_move = (best_move_score, m)
+                        break
+
+            else:
+                best_move_score = beta
+
+                # Call minimax_a_b for each remaining move to get scores of branch
+                for m in legal_moves:
+                    new_game = game.forecast_move(m)
+                    score = self.alphabeta(new_game, depth-1, alpha, best_move_score, True)
+                    if score[0] < best_move_score:
+                        best_move = (score[0], m)
+                        best_move_score = score[0]
+                    if best_move_score <= alpha:
+                        best_move = (best_move_score, m)
+                        break
+
+            return best_move
+
+        else:
+            # No valid moves remain
+            if maximizing_player:
+                return (-float('inf'), (-1,-1))
+            else:
+                return (float('inf'), (-1,-1))
