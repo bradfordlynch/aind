@@ -39,8 +39,15 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
 
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
 class ReflectionPlayer:
     """Player that reflects the movement of the other player """
@@ -140,11 +147,15 @@ class CustomPlayer:
 
         self.time_left = time_left
 
-        # TODO: finish this function!
-
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
+
+        # Set search method
+        if self.method == 'minimax':
+            search_fn = self.minimax
+        else:
+            search_fn = self.alphabeta
 
         # Check if this is the first move
         if game.move_count <= 1:
@@ -169,11 +180,11 @@ class CustomPlayer:
                 if self.iterative:
                     depth = 1
                     while True:
-                        best_move = self.minimax(game, depth)
+                        best_move = search_fn(game, depth)
                         depth += 1
                 else:
                     depth = 3
-                    best_move = self.minimax(game, depth)
+                    best_move = search_fn(game, depth)
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
@@ -220,9 +231,9 @@ class CustomPlayer:
         legal_moves = game.get_legal_moves()
         if legal_moves:
             # Check if max depth has been reached
-            if depth == 1:
+            if depth == 0:
                 # Apply heuristic to score moves
-                scores = [(self.score(game.forecast_move(m), self), m) for m in legal_moves]
+                return (self.score(game, self), game.get_player_location(self))
             # Max depth not reached, call minimax again
             else:
                 # Call minimax for each remaining move to get scores of branch
