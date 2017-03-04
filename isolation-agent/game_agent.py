@@ -166,11 +166,13 @@ class CustomPlayer:
             if not legal_moves:
                 return (-1,-1)
             else:
-                depth = 3
                 if self.iterative:
-                    for d in range(1, depth+1):
-                        best_move = self.minimax(game, d)
+                    depth = 1
+                    while True:
+                        best_move = self.minimax(game, depth)
+                        depth += 1
                 else:
+                    depth = 3
                     best_move = self.minimax(game, depth)
 
         except Timeout:
@@ -289,45 +291,35 @@ class CustomPlayer:
         if legal_moves:
             # Check if max depth has been reached
             if depth == 0:
-                # Apply heuristic to score moves
+                # Apply heuristic to score move
                 return (self.score(game, self), game.get_player_location(self))
-                # scores = [(self.score(game.forecast_move(m), self),m) for m in legal_moves]
-                # print(scores)
-                #
-                # if maximizing_player:
-                #     return max(scores)
-                # else:
-                #     return min(scores)
-            # Max depth not reached, call minimax again
-            elif maximizing_player:
-                best_move_score = alpha
 
-                # Call minimax_a_b for each remaining move to get scores of branch
+            if maximizing_player:
+                best_score = (float('-inf'),(-1,-1))
                 for m in legal_moves:
                     new_game = game.forecast_move(m)
-                    score = self.alphabeta(new_game, depth-1, best_move_score, beta, False)
-                    if score[0] > best_move_score:
-                        best_move = (score[0], m)
-                        best_move_score = score[0]
-                    if beta <= best_move_score:
-                        best_move = (best_move_score, m)
+                    score = self.alphabeta(new_game, depth-1, alpha, beta, False)
+                    score = (score[0], m)
+                    best_score = max(best_score, score)
+                    alpha = max(alpha, best_score[0])
+                    if beta <= alpha:
+                        # Trim this branch
                         break
 
+                return best_score
             else:
-                best_move_score = beta
-
-                # Call minimax_a_b for each remaining move to get scores of branch
+                best_score = (float('inf'),(-1,-1))
                 for m in legal_moves:
                     new_game = game.forecast_move(m)
-                    score = self.alphabeta(new_game, depth-1, alpha, best_move_score, True)
-                    if score[0] < best_move_score:
-                        best_move = (score[0], m)
-                        best_move_score = score[0]
-                    if best_move_score <= alpha:
-                        best_move = (best_move_score, m)
+                    score = self.alphabeta(new_game, depth-1, alpha, beta, True)
+                    score = (score[0], m)
+                    best_score = min(best_score, score)
+                    beta = min(beta, best_score[0])
+                    if beta <= alpha:
                         break
 
-            return best_move
+                return best_score
+
 
         else:
             # No valid moves remain
