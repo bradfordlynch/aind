@@ -9,19 +9,87 @@ relative strength using tournament.py and include the results in your report.
 import random
 from random import randint
 
-counter = 0
-
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
     pass
 
-
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
-    of the given player.
+    of the given player using a weighting of the player and opponent's remaining
+    legal moves.
 
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
+    if type(player) == CustomPlayer:
+        psi = player.psi
+    else:
+        print('Score got an object that is not a player')
+        psi = 20
+    num_moves = game.move_count
+
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - min(10,num_moves/psi)*opp_moves)
+
+
+def weighted_improved_score(game, player):
+    """Calculate the heuristic value of a game state from the point of view
+    of the given player using a weighting of the player and opponent's remaining
+    legal moves.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
+    if type(player) == CustomPlayer:
+        psi = player.psi
+    else:
+        print('Score got an object that is not a player')
+        psi = 20
+
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - psi*opp_moves)
+
+def blanks_score(game, player):
+    """Calculate the heuristic value of a game state using the legal moves for
+    each player and the number of remaining blank spaces.
 
     Parameters
     ----------
@@ -45,9 +113,11 @@ def custom_score(game, player):
     if game.is_winner(player):
         return float("inf")
 
+
+    blanks = len(game.get_blank_spaces())
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves)
+    return float(own_moves - opp_moves)/blanks
 
 class ReflectionPlayer:
     """Player that reflects the movement of the other player """
@@ -108,6 +178,7 @@ class CustomPlayer:
             'best':[(2,3),(3,4),(4,3),(3,2)],
             'second':[(r,c) for r in range(2,5) for c in range(2,5)]
         }
+        self.psi = 10
 
     def get_move(self, game, legal_moves, time_left):
         """Search for the best move from the available legal moves and return a
@@ -159,6 +230,12 @@ class CustomPlayer:
 
         # Check if this is the first move
         if game.move_count <= 1:
+            # if self.first_move != None:
+            #     if self.first_move in legal_moves:
+            #         return self.first_move
+            #     else:
+            #         raise ValueError
+            #         return (-1, -1)
             for move in self.openings['best']:
                 if move in legal_moves:
                     return move
@@ -168,7 +245,6 @@ class CustomPlayer:
                     return move
 
             return legal_moves[randint(0, len(legal_moves) - 1)]
-
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
@@ -183,15 +259,17 @@ class CustomPlayer:
                         best_move = search_fn(game, depth)
                         depth += 1
                 else:
-                    depth = 3
-                    best_move = search_fn(game, depth)
+                    depth = self.search_depth
+                    return search_fn(game, depth)[1]
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            pass
-
-        # Return the best move from the last completed search iteration
-        return best_move[1]
+            try:
+                # Return the best move from the last completed search iteration
+                return best_move[1]
+            except NameError:
+                # Ran out of time before search finished, return random legal move
+                return legal_moves[randint(0, len(legal_moves) - 1)]
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
